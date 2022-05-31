@@ -294,7 +294,6 @@ interface IERC721 is IERC165 {
     ) external;
 }
 
-// SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)
 
 pragma solidity ^0.8.0;
@@ -1831,9 +1830,9 @@ interface IDrop {
 }
 
 interface IMarket {
-    function isMember(address user) public view virtual returns (bool);
+    function isMember(address user) external view returns (bool);
 
-    function addToEscrow(address _address) external payable virtual;
+    function addToEscrow(address _address) external payable;
 }
 
 contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
@@ -1845,7 +1844,6 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     address constant MARKET_SHARE_ADDRESS =
         0x454cfAa623A629CC0b4017aEb85d54C42e91479d;
 
-    mapping(uint256 => TokenData) public tokenIdToTokenData;
     mapping(address => bool) public whitelist;
     mapping(address => uint256) public minters;
     address public treasuryAddress;
@@ -1864,6 +1862,7 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     bool public mintEnabled;
     bool public whitelistOnly;
     bool public canMintWithERC20;
+    bool public isRevealed;
 
     modifier onlyMintEnabled() {
         require(mintEnabled, "Mint Disabled");
@@ -1882,19 +1881,20 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
         _;
     }
 
-    constructor(
-        string _nftBaseURI,
-        address _payableERC20Token,
-        address _treasuryAddress
-    ) ERC721("Flaming Phenix Club", "FPC") {
+    constructor(string memory _nftBaseURI, uint256 _initialTeamReserve)
+        ERC721("Flaming Phenix Club", "FPC")
+    {
         market = IMarket(MARKET_ADDRESS);
         baseURI = _nftBaseURI;
         mintEnabled = false;
         whitelistOnly = false;
         canMintWithERC20 = false;
+        isRevealed = false;
 
-        payableERC20Token = _payableERC20Token;
-        treasuryAddress = _treasuryAddress;
+        // PHNX Token (CR20)
+        payableERC20Token = 0x57d06bB1e3B60C875cD3A4445a53217F9B44d390;
+        // Phenix Fund Reserve (Treasury | Multi-Sig)
+        treasuryAddress = 0xF7c5A5dbBe4B73C22e9FB402Dc1816769c4bC46A;
 
         normalMintCost = 290 ether;
         memberMintCost = 260 ether;
@@ -1904,8 +1904,20 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
         // 10% of every mint via marketplace drop page
         marketShareFee = (FXP_BASE * 10) / 100;
 
+        // Mint initial team reserve
+        if (_initialTeamReserve > 0) {
+            for (uint256 i = 0; i < _initialTeamReserve; i++) {
+                uint256 index = totalSupply() + 1;
+                _safeMint(msg.sender, index);
+            }
+        }
+
         //Transfer contract to developers account
         transferOwnership(msg.sender);
+    }
+
+    function setRevealed() external onlyOwner {
+        isRevealed = true;
     }
 
     //Update Base URL
@@ -1985,11 +1997,11 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
         onlyWhitelisted
     {
         _mintNFT(_amount);
-        _asyncTransfer(owner(), msg.value);
+        _asyncTransfer(treasuryAddress, msg.value);
     }
 
     //Mint with ERC20 Token
-    function mintFPCWithERC20Token(uint256 _amount)
+    function mintExternalWithERC20Token(uint256 _amount)
         external
         onlyMintEnabled
         onlyWhitelisted
@@ -2004,16 +2016,10 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
 
         uint256 requiredAmount = payableERC20TokenMintCost * _amount;
 
-        require(
-            IERC20(payableERC20Token).allowance(msg.sender, owner()) >=
-                requiredAmount,
-            "Not enough allowance."
-        );
-
         // send tokens to owner
         IERC20(payableERC20Token).transferFrom(
             msg.sender,
-            owner(),
+            treasuryAddress,
             requiredAmount
         );
 
@@ -2069,9 +2075,9 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     function mintCost(address _minter) public view override returns (uint256) {
         uint256 _mintCost = normalMintCost;
 
-        if (isMember(_minter) == true) {
-            _mintCost = memberMintCost;
-        }
+        // if (market.isMember(_minter) == true) {
+        //     _mintCost = memberMintCost;
+        // }
 
         if (whitelist[_minter] == true) {
             _mintCost = whitelistMintCost;
@@ -2116,14 +2122,9 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
             });
     }
 
-    //Returns if address has membership
-    function isMember(address _address) public view returns (bool) {
-        return market.isMember(_address);
-    }
-
     //Returns if address is Whitelisted
     function isWhitelisted(address _address) public view returns (bool) {
-        return whitelist[_address] || isMember(_address);
+        return whitelist[_address] || market.isMember(_address);
     }
 
     ////////////////////
@@ -2133,6 +2134,20 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     //Override baseURI function from ERC721
     function _baseURI() internal view override returns (string memory) {
         return baseURI;
+    }
+
+    function tokenURI(uint256 tokenID)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        if (isRevealed != true) {
+            return string(abi.encodePacked(baseURI, "notRevealed"));
+        }
+
+        return string(abi.encodePacked(super.tokenURI(tokenID)));
     }
 
     //Returns owned id list of an address
