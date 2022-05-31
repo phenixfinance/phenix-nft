@@ -2075,9 +2075,9 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     function mintCost(address _minter) public view override returns (uint256) {
         uint256 _mintCost = normalMintCost;
 
-        // if (market.isMember(_minter) == true) {
-        //     _mintCost = memberMintCost;
-        // }
+        if (market.isMember(_minter) == true) {
+            _mintCost = memberMintCost;
+        }
 
         if (whitelist[_minter] == true) {
             _mintCost = whitelistMintCost;
