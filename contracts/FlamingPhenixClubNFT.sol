@@ -1845,7 +1845,6 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
         0x454cfAa623A629CC0b4017aEb85d54C42e91479d;
 
     mapping(address => bool) public whitelist;
-    mapping(address => uint256) public minters;
     address public treasuryAddress;
     uint256 public normalMintCost;
     uint256 public memberMintCost;
@@ -1886,10 +1885,6 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     {
         market = IMarket(MARKET_ADDRESS);
         baseURI = _nftBaseURI;
-        mintEnabled = false;
-        whitelistOnly = false;
-        canMintWithERC20 = false;
-        isRevealed = false;
 
         // PHNX Token (CR20)
         payableERC20Token = 0x57d06bB1e3B60C875cD3A4445a53217F9B44d390;
@@ -2027,8 +2022,6 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
             uint256 index = totalSupply() + 1;
             _safeMint(msg.sender, index);
         }
-
-        minters[msg.sender] += _amount;
     }
 
     //Private Mint Function
@@ -2050,8 +2043,6 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
             uint256 index = totalSupply() + 1;
             _safeMint(msg.sender, index);
         }
-
-        minters[msg.sender] += _amount;
     }
 
     //Add Whitelist
@@ -2075,12 +2066,10 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
     function mintCost(address _minter) public view override returns (uint256) {
         uint256 _mintCost = normalMintCost;
 
-        if (market.isMember(_minter) == true) {
-            _mintCost = memberMintCost;
-        }
-
         if (whitelist[_minter] == true) {
             _mintCost = whitelistMintCost;
+        } else if (market.isMember(_minter) == true) {
+            _mintCost = memberMintCost;
         }
 
         return _mintCost;
