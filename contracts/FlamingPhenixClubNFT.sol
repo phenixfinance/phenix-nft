@@ -1888,8 +1888,8 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
 
         // PHNX Token (CR20)
         payableERC20Token = 0x57d06bB1e3B60C875cD3A4445a53217F9B44d390;
-        // Phenix Fund Reserve (Treasury | Multi-Sig)
-        treasuryAddress = 0xF7c5A5dbBe4B73C22e9FB402Dc1816769c4bC46A;
+        // Phenix Owner Address
+        treasuryAddress = 0xcf322B554b6CfB668221D5b1979B6e4E58AB4DbC;
 
         normalMintCost = 290 ether;
         memberMintCost = 260 ether;
@@ -1949,6 +1949,11 @@ contract FlamingPhenixClubNFT is ERC721Enumerable, Ownable, IDrop, PullPayment {
         onlyOwner
     {
         payableERC20Token = _payableERC20Token;
+    }
+
+    // Updates Treasury Address
+    function setTreasuryAddress(address _treasuryAddress) external onlyOwner {
+        treasuryAddress = _treasuryAddress;
     }
 
     // updates mint costs
