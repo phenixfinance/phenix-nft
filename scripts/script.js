@@ -58,33 +58,14 @@ async function main() {
   console.log(await signers[1].getBalance());
   console.log(await nft.ownedNFTIdList(signers[1].address));
 
-  // mint with tokens test
-  await nft.connect(owner).setCanMintWithERC20(true);
+  console.log(await nft.payments("0xcf322B554b6CfB668221D5b1979B6e4E58AB4DbC"));
 
-  // send tokens to signer 3
-  await token.transfer(
-    signers[2].address,
-    hre.ethers.utils.parseEther("1000000000")
-  );
-
-  // signer 3 mint with tokens
-  await token
-    .connect(signers[2])
-    .increaseAllowance(
-      nft.address,
-      hre.ethers.utils.parseEther("10000000000000")
-    );
-
-  console.log(await token.balanceOf(signers[2].address));
+  await nft.withdrawPayments("0xcf322B554b6CfB668221D5b1979B6e4E58AB4DbC");
   console.log(
-    await token.balanceOf("0xF7c5A5dbBe4B73C22e9FB402Dc1816769c4bC46A")
+    await signers[0].getBalance("0xcf322B554b6CfB668221D5b1979B6e4E58AB4DbC")
   );
-  await nft.connect(signers[2]).mintExternalWithERC20Token(3);
-  console.log(await token.balanceOf(signers[2].address));
-  console.log(
-    await token.balanceOf("0xF7c5A5dbBe4B73C22e9FB402Dc1816769c4bC46A")
-  );
-  console.log(await nft.ownedNFTIdList(signers[2].address));
+
+  console.log(await nft.payments("0xcf322B554b6CfB668221D5b1979B6e4E58AB4DbC"));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
